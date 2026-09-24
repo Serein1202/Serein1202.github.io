@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cx330. · 个人主页</title>
+<meta name="description" content="Cx330.（@Serein1202）的个人主页：Amateur Coder，专注代理规则与去广告脚本、平台自动化等方向。">
+<style>
+  /* =========================================================================
+     设计变量
+     ========================================================================= */
+  :root{
+    --bg:            #0b1020;
+    --bg-soft:       #0e1530;
+    --card:          #121a35;
+    --card-hover:    #16203f;
+    --border:        rgba(148,163,184,.16);
+    --border-strong: rgba(56,189,248,.45);
+    --text:          #e8eeff;
+    --muted:         #93a3bd;
+    --muted-2:       #6d7d99;
+    --accent-1:      #38bdf8;
+    --accent-2:      #8b5cf6;
+    --grad:          linear-gradient(135deg,#38bdf8 0%,#8b5cf6 100%);
+    --radius:        16px;
+    --radius-sm:     10px;
+    --shadow:        0 10px 30px rgba(2,6,23,.55);
+    --shadow-hover:  0 18px 40px rgba(56,189,248,.16);
+    --ease:          cubic-bezier(.22,.61,.36,1);
+    --ease-std:      cubic-bezier(.4,0,.2,1);
+    --dur:           380ms;
+  }
+
+  /* conic 旋转描边用到的可动画角度变量（原生 CSS，无外部依赖） */
+  @property --ang{ syntax:'<angle>'; initial-value:0deg; inherits:false; }
+
+  /* =========================================================================
+     基础重置
+     ========================================================================= */
+  *,*::before,*::after{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; scroll-padding-top:84px; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:16px; line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background:
+      radial-gradient(680px 420px at 12% -6%, rgba(56,189,248,.14), transparent 62%),
+      radial-gradient(720px 460px at 92% 4%, rgba(139,92,246,.15), transparent 62%);
+    pointer-events:none; z-index:0;
+  }
+  img{ max-width:100%; display:block; }
+  a{ color:inherit; text-decoration:none; }
+  ::selection{ background:rgba(56,189,248,.32); }
+  /* 键盘焦点样式保留，不被自定义光标替换 */
+  :focus-visible{ outline:2px solid var(--accent-1); outline-offset:3px; }
+
+  .container{ width:100%; max-width:1140px; margin:0 auto; padding:0 22px; position:relative; z-index:1; }
+  section{ padding:76px 0; }
+
+  /* =========================================================================
+     通用组件
+     ========================================================================= */
+  .grad-text{
+    background:var(--grad);
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent; color:transparent;
+  }
+  .section-head{ margin-bottom:32px; }
+  .section-kicker{
+    display:inline-block; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--accent-1); font-weight:700; margin-bottom:8px;
+  }
+  .section-title{
+    margin:0; font-size:29px; line-height:1.3; letter-spacing:.2px;
+    /* 区块标题：clip-path 从下往上揭示（只播一次） */
+    clip-path:inset(0 0 100% 0);
+    transition:clip-path 620ms var(--ease);
+  }
+  .section-head.is-visible .section-title{ clip-path:inset(0 0 -14% 0); }
+  .section-sub{ margin:10px 0 0; color:var(--muted); font-size:14.5px; }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+
+  /* =========================================================================
+     0. Preloader
+     ========================================================================= */
+  .preloader{
+    position:fixed; inset:0; z-index:200;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+    background:var(--bg);
+    transition:opacity 280ms var(--ease), visibility 280ms var(--ease);
+  }
+  .preloader.is-done{ opacity:0; visibility:hidden; pointer-events:none; }
+  .preloader-brand{ font-size:34px; font-weight:800; letter-spacing:1.5px; display:flex; }
+  .preloader-brand span{
+    display:inline-block; transform:translateY(18px); opacity:0;
+    animation:brandUp 420ms var(--ease) forwards;
+    background:var(--grad); -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent; color:transparent;
+  }
+  .preloader-brand span:nth-child(1){ animation-delay:0ms }
+  .preloader-brand span:nth-child(2){ animation-delay:60ms }
+  .preloader-brand span:nth-child(3){ animation-delay:120ms }
+  .preloader-brand span:nth-child(4){ animation-delay:180ms }
+  .preloader-brand span:nth-child(5){ animation-delay:240ms }
+  .preloader-brand span:nth-child(6){ animation-delay:300ms }
+  @keyframes brandUp{ to{ transform:none; opacity:1; } }
+  .preloader-line{ width:180px; height:1px; background:rgba(148,163,184,.22); overflow:hidden; }
+  .preloader-line i{
+    display:block; width:0; height:100%; background:var(--grad);
+    transition:width 600ms var(--ease);
+  }
+
+  /* =========================================================================
+     1. 导航（进度条 / 毛玻璃 / 滑块 / 折叠）
+     ========================================================================= */
+  .nav{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    background:rgba(11,16,32,.72);
+    border-bottom:1px solid transparent;
+    transition:background var(--dur) var(--ease), border-color var(--dur) var(--ease),
+               backdrop-filter var(--dur) var(--ease);
+  }
+  .nav.is-scrolled{
+    background:rgba(11,16,32,.78);
+    backdrop-filter:blur(14px) saturate(150%);
+    -webkit-backdrop-filter:blur(14px) saturate(150%);
+    border-bottom-color:var(--border);
+  }
+  /* 顶部渐变滚动进度条（scaleX，不改 width） */
+  .progress{
+    position:absolute; top:0; left:0; height:2px; width:100%;
+    background:var(--grad);
+    transform:scaleX(0); transform-origin:0 50%;
+    z-index:52;
+  }
+  .nav-inner{ display:flex; align-items:center; justify-content:space-between; height:64px; }
+  .logo{ font-size:18px; font-weight:800; letter-spacing:.5px; display:flex; align-items:center; gap:9px; }
+  .logo-dot{ width:11px; height:11px; border-radius:50%; background:var(--grad); box-shadow:0 0 12px rgba(56,189,248,.6); }
+  .nav-links{ position:relative; display:flex; align-items:center; gap:6px; }
+  .nav-links a{
+    padding:8px 14px; border-radius:999px; font-size:14.5px; color:var(--muted);
+    transition:color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .nav-links a:hover{ color:var(--text); background:rgba(148,163,184,.1); }
+  .nav-links a.is-current{ color:var(--text); }
+  /* 下划线滑块：transform 平移 */
+  .nav-slider{
+    position:absolute; bottom:2px; left:0; height:2px; border-radius:2px;
+    background:var(--grad); opacity:0;
+    transform:translateX(0); width:0;
+    transition:transform 320ms var(--ease-std), width 320ms var(--ease-std), opacity 240ms var(--ease);
+    pointer-events:none;
+  }
+  .nav-slider.is-on{ opacity:1; }
+
+  .nav-toggle{
+    display:none; width:40px; height:40px; border-radius:var(--radius-sm);
+    background:transparent; border:1px solid var(--border); color:var(--text);
+    cursor:pointer; align-items:center; justify-content:center; padding:0;
+    transition:border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .nav-toggle:hover{ border-color:var(--border-strong); background:rgba(148,163,184,.08); }
+  .nav-toggle svg{ width:20px; height:20px; }
+  .nav-panel{
+    display:none; border-top:1px solid var(--border);
+    background:rgba(11,16,32,.94);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    padding:6px 22px 14px;
+  }
+  .nav-panel a{ display:block; padding:12px 4px; font-size:15px; color:var(--muted); border-bottom:1px solid rgba(148,163,184,.08); }
+  .nav-panel a:last-child{ border-bottom:0; }
+  .nav-panel.is-open{ display:block; }
+
+  /* =========================================================================
+     2. Hero（极光粒子画布 + 逐字标题 + 打字机）
+     ========================================================================= */
+  .hero-section{ position:relative; overflow:hidden; padding:150px 0 84px; }
+  #heroCanvas{
+    position:absolute; left:0; top:-100px; width:100%; height:calc(100% + 200px);
+    z-index:0; pointer-events:none;
+    transform:translate3d(0,0,0);
+  }
+  .hero{
+    position:relative; z-index:1; padding:0;
+    display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,.85fr);
+    gap:56px; align-items:center;
+    will-change:transform,opacity;
+  }
+  .hero-tag{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 14px; border-radius:999px;
+    border:1px solid var(--border); background:rgba(148,163,184,.07);
+    color:var(--muted); font-size:13px; margin-bottom:20px;
+  }
+  .hero-tag i{ width:8px; height:8px; border-radius:50%; background:#34d399; box-shadow:0 0 10px #34d399; }
+  .hero h1{ margin:0 0 6px; font-size:clamp(38px,5.4vw,58px); line-height:1.1; letter-spacing:-.5px; }
+  /* 逐字揭示：translateY(24px) + blur(8px) + opacity 0 */
+  .hero h1 .ch{
+    display:inline-block;
+    transform:translateY(24px); opacity:0; filter:blur(8px);
+    transition:transform 520ms var(--ease), opacity 520ms var(--ease), filter 520ms var(--ease);
+  }
+  .hero h1 .ch.is-in{ transform:none; opacity:1; filter:blur(0); }
+  .hero-user{ margin:0 0 22px; color:var(--muted); font-size:15.5px; }
+  .hero-user code{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    background:rgba(148,163,184,.1); padding:3px 9px; border-radius:7px;
+    color:#bfd3f5; font-size:14px;
+  }
+  .typed-line{
+    min-height:32px; font-size:17px; color:#cbd8ef; margin:0 0 30px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  .caret{ display:inline-block; width:9px; height:19px; margin-left:3px; background:var(--accent-1); vertical-align:-3px; animation:blink 1s steps(1) infinite; }
+  @keyframes blink{ 0%,49%{opacity:1} 50%,100%{opacity:0} }
+
+  .btn-row{ display:flex; flex-wrap:wrap; gap:14px; }
+  .btn{
+    position:relative; overflow:hidden;
+    display:inline-flex; align-items:center; gap:9px;
+    padding:12px 24px; border-radius:12px; font-size:15px; font-weight:600;
+    border:1px solid transparent; cursor:pointer;
+    transform:translate3d(var(--mag-x,0px),var(--mag-y,0px),0);
+    transition:transform 300ms cubic-bezier(.22,.61,.36,1), box-shadow var(--dur) var(--ease),
+               border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .btn > *{ position:relative; z-index:1; }
+  /* 按钮内动态高光：跟随鼠标相对坐标 */
+  .btn::before{
+    content:""; position:absolute; inset:0; border-radius:inherit; z-index:0;
+    background:radial-gradient(120px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,.34), transparent 68%);
+    opacity:0; transition:opacity 300ms var(--ease); pointer-events:none;
+  }
+  .btn:hover::before{ opacity:1; }
+  .btn-primary{ background:var(--grad); color:#08111f; box-shadow:0 10px 26px rgba(56,189,248,.28); }
+  .btn-primary:hover{ transform:translate3d(var(--mag-x,0px),calc(var(--mag-y,0px) - 2px),0); box-shadow:0 16px 34px rgba(139,92,246,.36); }
+  .btn-ghost{ background:rgba(148,163,184,.07); border-color:var(--border); color:var(--text); }
+  .btn-ghost:hover{ transform:translate3d(var(--mag-x,0px),calc(var(--mag-y,0px) - 2px),0); border-color:var(--border-strong); background:rgba(56,189,248,.1); }
+
+  .avatar-wrap{ display:flex; justify-content:center; }
+  .avatar-ring{ position:relative; width:250px; height:250px; border-radius:50%; padding:3px; background:var(--grad); box-shadow:0 24px 60px rgba(56,189,248,.22); }
+  .avatar-inner{ width:100%; height:100%; border-radius:50%; overflow:hidden; background:var(--bg-soft); display:flex; align-items:center; justify-content:center; }
+  .avatar-inner img{ width:100%; height:100%; object-fit:cover; }
+  .avatar-fallback{
+    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#1e3a8a,#4c1d95 55%,#0f172a);
+    font-size:92px; font-weight:800; letter-spacing:-2px;
+  }
+  .avatar-fallback span{ background:var(--grad); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+
+  /* =========================================================================
+     3. 关于我
+     ========================================================================= */
+  .about-body{ padding:30px 32px; }
+  .about-body p{ margin:0 0 16px; color:#c9d6ec; font-size:15.5px; }
+  .about-body p:last-child{ margin-bottom:0; }
+  .about-list{ margin:0; padding-left:0; list-style:none; display:grid; gap:10px; }
+  .about-list li{ color:var(--muted); font-size:14.5px; display:flex; gap:10px; align-items:flex-start; }
+  .about-list li::before{ content:"▹"; color:var(--accent-1); line-height:1.7; }
+
+  /* =========================================================================
+     4. 技能
+     ========================================================================= */
+  .skills-card{ padding:30px 32px; }
+  .skill{ margin-bottom:22px; }
+  .skill:last-child{ margin-bottom:0; }
+  .skill-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:9px; }
+  .skill-name{ display:flex; align-items:center; gap:9px; font-weight:600; font-size:15px; }
+  .lang-dot{ width:11px; height:11px; border-radius:50%; display:inline-block; flex:0 0 auto; }
+  .skill-count{ color:var(--muted-2); font-size:13px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .bar{ height:9px; border-radius:999px; background:rgba(148,163,184,.13); overflow:hidden; }
+  .bar-fill{
+    position:relative; overflow:hidden;
+    height:100%; width:0; border-radius:999px; background:var(--grad);
+    transition:width 700ms var(--ease);
+  }
+  /* 条内缓慢流动的渐变光泽（仅 transform 动画） */
+  .bar-fill::after{
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);
+    transform:translateX(-100%);
+  }
+  .bar-fill.is-live::after{ animation:sheen 3s linear infinite; }
+  @keyframes sheen{ to{ transform:translateX(200%); } }
+  .skills-note{ margin:20px 0 0; color:var(--muted-2); font-size:13px; }
+
+  /* =========================================================================
+     5. 项目展示（卡片 / tilt / conic 描边 / FLIP）
+     ========================================================================= */
+  .filters{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:26px; }
+  .filter-btn{
+    padding:8px 16px; border-radius:999px; font-size:13.5px; cursor:pointer;
+    background:rgba(148,163,184,.07); border:1px solid var(--border); color:var(--muted);
+    transition:color var(--dur) var(--ease), border-color var(--dur) var(--ease),
+               background var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .filter-btn:hover{ color:var(--text); border-color:var(--border-strong); transform:translateY(-1px); }
+  .filter-btn.is-active{ background:var(--grad); border-color:transparent; color:#08111f; font-weight:700; }
+  .filter-btn .cnt{ opacity:.72; font-size:12px; margin-left:5px; }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:20px; }
+
+  .repo{
+    position:relative;
+    display:flex; flex-direction:column; gap:14px; padding:22px;
+    transform-style:preserve-3d;
+    transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(var(--ty,0px));
+    transition:transform var(--dur) var(--ease), border-color var(--dur) var(--ease),
+               box-shadow var(--dur) var(--ease), background var(--dur) var(--ease),
+               opacity 300ms var(--ease);
+  }
+  /* 卡片内部跟随鼠标的径向高光 */
+  .repo::before{
+    content:""; position:absolute; inset:0; border-radius:inherit; z-index:0;
+    background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%), rgba(56,189,248,.16), transparent 62%);
+    opacity:0; transition:opacity 300ms var(--ease); pointer-events:none;
+  }
+  .repo:hover::before{ opacity:1; }
+  /* hover 时旋转的 conic 渐变描边（仅 hover 期间启动） */
+  .repo::after{
+    content:""; position:absolute; inset:-1px; border-radius:inherit; padding:1px;
+    background:conic-gradient(from var(--ang), transparent 0deg, #38bdf8 80deg, #8b5cf6 160deg, transparent 250deg);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude;
+    opacity:0; transition:opacity 300ms var(--ease); pointer-events:none;
+  }
+  .repo:hover::after{ opacity:1; animation:spinAng 3s linear infinite; }
+  @keyframes spinAng{ to{ --ang:360deg; } }
+  .repo > *{ position:relative; z-index:1; }
+  .repo:hover{ border-color:var(--border-strong); background:var(--card-hover); box-shadow:var(--shadow-hover); }
+  .repo.is-leaving{ opacity:0; transform:scale(.96) translateY(6px); }
+  .repo.is-entering{ opacity:0; transform:scale(.96) translateY(8px); }
+
+  .repo-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .repo-name{ font-size:17px; font-weight:700; letter-spacing:.2px; word-break:break-word; }
+  .repo:hover .repo-name{ color:var(--accent-1); }
+  .badge{ flex:0 0 auto; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700; letter-spacing:.04em; border:1px solid var(--border); color:var(--muted); background:rgba(148,163,184,.08); }
+  .badge-self{ color:#7dd3fc; border-color:rgba(56,189,248,.36); background:rgba(56,189,248,.1); }
+  .badge-fork{ color:#c4b5fd; border-color:rgba(139,92,246,.36); background:rgba(139,92,246,.1); }
+  .repo-desc{ margin:0; color:var(--muted); font-size:14px; flex:1 1 auto; }
+  .repo-desc.is-empty{ color:var(--muted-2); font-style:italic; }
+  .repo-meta{ display:flex; flex-wrap:wrap; gap:14px; font-size:13px; color:var(--muted-2); }
+  .repo-meta span{ display:inline-flex; align-items:center; gap:6px; }
+  .repo-foot{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:13px; border-top:1px solid rgba(148,163,184,.12); font-size:12.5px; color:var(--muted-2); }
+  .license{ padding:2px 9px; border-radius:6px; border:1px solid var(--border); background:rgba(148,163,184,.07); color:var(--muted); font-size:11.5px; }
+  .fork-from{ margin:0; font-size:12.5px; color:#a5b4fc; background:rgba(139,92,246,.1); border:1px solid rgba(139,92,246,.22); border-radius:9px; padding:7px 11px; }
+  .empty-hint{ display:none; padding:34px; text-align:center; color:var(--muted-2); border:1px dashed var(--border); border-radius:var(--radius); }
+  .empty-hint.is-open{ display:block; }
+
+  /* =========================================================================
+     6. GitHub 数据概览
+     ========================================================================= */
+  .stats-wrap{ position:relative; overflow:hidden; padding:34px 32px; }
+  #stats-canvas{ position:absolute; inset:0; width:100%; height:100%; opacity:.5; pointer-events:none; }
+  .stats-head{ position:relative; z-index:1; margin-bottom:24px; }
+  .stats-grid{ position:relative; z-index:1; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+  .stat{
+    padding:22px 18px; border-radius:var(--radius);
+    background:rgba(11,16,32,.66); border:1px solid var(--border); text-align:center;
+    transition:transform var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+  .stat:hover{ transform:translateY(-4px); border-color:var(--border-strong); }
+  .stat-num{ font-size:32px; font-weight:800; letter-spacing:-.5px; line-height:1.2; }
+  .stat-label{ margin-top:6px; font-size:13px; color:var(--muted); }
+
+  /* =========================================================================
+     7. 页脚 + 回到顶部
+     ========================================================================= */
+  .footer{ border-top:1px solid var(--border); padding:32px 0 40px; margin-top:20px; text-align:center; color:var(--muted-2); font-size:13.5px; }
+  .footer strong{ color:var(--muted); font-weight:600; }
+
+  .to-top{
+    position:fixed; right:26px; bottom:26px; z-index:60;
+    width:46px; height:46px; border-radius:14px; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(18,26,53,.9); border:1px solid var(--border); color:var(--text);
+    cursor:pointer; opacity:0; pointer-events:none;
+    transform:translateY(14px) scale(.9);
+    transition:opacity 320ms var(--ease), transform 320ms var(--ease),
+               box-shadow 320ms var(--ease), border-color 320ms var(--ease);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  }
+  .to-top.is-on{ opacity:1; pointer-events:auto; transform:none; }
+  .to-top:hover{ border-color:var(--border-strong); box-shadow:0 0 0 3px rgba(56,189,248,.14), 0 12px 34px rgba(139,92,246,.34); }
+  .to-top svg{ width:18px; height:18px; }
+
+  /* =========================================================================
+     自定义光标光晕（即时跟随，不做插值）
+     系统光标保留不隐藏；元素仅在 hover:hover + 精确指针 + ≥1024px 且未开启
+     减弱动效时由 JS 创建，不满足条件时 DOM 中不存在任何光标节点
+     ========================================================================= */
+  #cursorGlow{
+    position:fixed; left:0; top:0; z-index:300; pointer-events:none;
+    width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%;
+    background:radial-gradient(circle, rgba(56,189,248,.95) 0%, rgba(139,92,246,.55) 45%, transparent 72%);
+    filter:blur(2px); mix-blend-mode:screen;
+    opacity:0; scale:1;
+    transition:opacity 220ms ease-out, scale 180ms ease-out;
+    will-change:translate;
+  }
+  body.cur-seen  #cursorGlow{ opacity:1; }
+  body.cur-hot   #cursorGlow{ scale:2.4; }
+  body.cur-press #cursorGlow{ scale:.7; }
+
+  /* 按下点一次性涟漪：6px→40px 扩散 400ms 后自动移除，不累积节点 */
+  .cursor-ripple{
+    position:fixed; left:0; top:0; z-index:299; pointer-events:none;
+    width:6px; height:6px; margin:-3px 0 0 -3px; border-radius:50%;
+    border:1px solid rgba(56,189,248,.85); box-shadow:0 0 12px rgba(56,189,248,.35);
+    mix-blend-mode:screen; animation:cursorRipple 400ms ease-out forwards;
+  }
+  @keyframes cursorRipple{
+    from{ transform:scale(.6); opacity:.9; }
+    to  { transform:scale(6.7); opacity:0; }
+  }
+  /* 系统光标始终保留（不隐藏、不替换），文本选择与输入框行为不受影响 */
+
+  /* =========================================================================
+     进入视口动画（通用 + 交错）
+     ========================================================================= */
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+  .reveal.is-visible{ opacity:1; transform:none; }
+  .stagger-item{ opacity:0; transform:translateY(18px); transition:opacity var(--dur) var(--ease), transform var(--dur) var(--ease); transition-delay:var(--d,0ms); }
+  .stagger-item.is-visible{ opacity:1; transform:none; }
+  /* 入场动画播完后清除延迟，避免影响后续交互（如卡片 tilt） */
+  .stagger-item.stagger-done{ transition-delay:0ms; }
+  /* tilt 期间由 JS 逐帧写 transform，需关闭 transform 过渡（平滑交给 lerp） */
+  .repo.is-tilting{
+    transition:border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+               background var(--dur) var(--ease), opacity 300ms var(--ease);
+  }
+
+  /* =========================================================================
+     响应式：≥1200 / 768–1199 / <768
+     ========================================================================= */
+  @media (min-width:1200px){ .grid{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  @media (max-width:1199px){
+    .hero{ grid-template-columns:minmax(0,1fr) 220px; gap:40px; }
+    .avatar-ring{ width:210px; height:210px; }
+    .grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .stats-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+  @media (max-width:768px){
+    section{ padding:58px 0; }
+    .nav-links{ display:none; }
+    .nav-toggle{ display:flex; }
+    .hero-section{ padding:112px 0 56px; }
+    .hero{ grid-template-columns:minmax(0,1fr); text-align:center; gap:32px; }
+    .avatar-wrap{ order:-1; }
+    .avatar-ring{ width:168px; height:168px; }
+    .btn-row{ justify-content:center; }
+    .hero-tag{ margin-left:auto; margin-right:auto; }
+    .grid{ grid-template-columns:minmax(0,1fr); }
+    .about-body,.skills-card,.stats-wrap{ padding:24px 20px; }
+    .section-title{ font-size:24px; }
+    .to-top{ right:16px; bottom:16px; }
+  }
+  @media (hover:none){
+    .repo:hover{ transform:none; }
+    .repo:hover::after{ opacity:0; }
+  }
+
+  /* =========================================================================
+     降级：prefers-reduced-motion
+     ========================================================================= */
+  @media (prefers-reduced-motion:reduce){
+    *{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+    html{ scroll-behavior:auto; }
+    .reveal,.stagger-item{ opacity:1; transform:none; }
+    .section-title{ clip-path:none; }
+    .hero h1 .ch{ transform:none; opacity:1; filter:none; }
+    #cursorGlow,.cursor-ripple{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 0. Preloader ============ -->
+<div class="preloader" id="preloader" aria-hidden="true">
+  <div class="preloader-brand"><span>C</span><span>x</span><span>3</span><span>3</span><span>0</span><span>.</span></div>
+  <div class="preloader-line"><i id="preloaderBar"></i></div>
+</div>
+
+<!-- ============ 自定义光标光晕（装饰，aria-hidden；由 JS 按启用条件动态创建） ============ -->
+
+<!-- ================= 1. 吸顶导航 ================= -->
+<header class="nav" id="siteNav">
+  <div class="progress" id="progressBar" aria-hidden="true"></div>
+  <div class="container nav-inner">
+    <a class="logo" href="#top"><span class="logo-dot"></span>Cx330.</a>
+    <nav class="nav-links" id="navLinks" aria-label="主导航">
+      <a href="#about" data-target="about">关于</a>
+      <a href="#skills" data-target="skills">技能</a>
+      <a href="#projects" data-target="projects">项目</a>
+      <a href="#stats" data-target="stats">统计</a>
+      <span class="nav-slider" id="navSlider" aria-hidden="true"></span>
+    </nav>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="展开导航" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M3 6h18M3 12h18M3 18h18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="nav-panel" id="navPanel">
+    <a href="#about">关于</a>
+    <a href="#skills">技能</a>
+    <a href="#projects">项目</a>
+    <a href="#stats">统计</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ================= 2. Hero ================= -->
+  <section class="hero-section" id="heroSection">
+    <canvas id="heroCanvas" aria-hidden="true"></canvas>
+    <div class="container hero" id="heroContent" aria-label="个人信息">
+      <div class="hero-text">
+        <span class="hero-tag"><i></i>Amateur Coder · From China</span>
+        <h1 id="heroTitle"><span class="grad-text">Cx330.</span></h1>
+        <p class="hero-user">GitHub：<code>@Serein1202</code></p>
+        <p class="typed-line"><span id="typed"></span><span class="caret" aria-hidden="true"></span></p>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="https://github.com/Serein1202" target="_blank" rel="noopener">
+            <span class="btn-label">查看 GitHub</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M7 17 17 7M9 7h8v8"/>
+            </svg>
+          </a>
+          <a class="btn btn-ghost" href="#projects"><span class="btn-label">浏览项目</span></a>
+        </div>
+      </div>
+
+      <div class="avatar-wrap">
+        <div class="avatar-ring">
+          <div class="avatar-inner" id="avatarBox">
+            <!-- 头像加载失败时由 JS 替换为字母 “C” 的渐变块 -->
+            <img id="avatarImg" src="https://avatars.githubusercontent.com/u/33860649?v=4" alt="Cx330. 的头像" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 3. 关于我 ================= -->
+  <section id="about" class="container">
+    <div class="section-head" data-reveal>
+      <span class="section-kicker">About</span>
+      <h2 class="section-title">关于我</h2>
+      <p class="section-sub">以下内容均基于 GitHub 公开信息整理，不作虚构。</p>
+    </div>
+    <div class="card about-body reveal">
+      <p>我是 <strong>Cx330.</strong>，GitHub 用户名 <strong>@Serein1202</strong>，2017 年 11 月注册，自称一名业余开发者（Amateur Coder），来自中国。</p>
+      <p>日常折腾的方向集中在技术周边的小工具上：代理配置与增强脚本、各类去广告脚本、Telegram 与 X 平台上的自动化处理，以及一些个人自用的爬虫与实用脚本。</p>
+      <ul class="about-list" data-stagger>
+        <li>主要产出以个人自用为主，代码开源在 GitHub，方便自己和有需要的人复用。</li>
+        <li>也关注并跟进一些开源项目，通过 Fork 参与适配与维护（如 Xposed 适配、Windows 激活脚本、Tracker 列表等）。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= 4. 技能 ================= -->
+  <section id="skills" class="container">
+    <div class="section-head" data-reveal>
+      <span class="section-kicker">Skills</span>
+      <h2 class="section-title">技能</h2>
+      <p class="section-sub">按公开仓库语言统计，反映的是使用分布而非熟练度评级。</p>
+    </div>
+    <div class="card skills-card reveal" id="skillsCard">
+      <div id="skillBars"><!-- 由 JS 渲染 --></div>
+      <p class="skills-note">统计口径：13 个公开仓库的主语言分布；未标记语言（无语言）的仓库未计入占比。</p>
+    </div>
+  </section>
+
+  <!-- ================= 5. 项目展示 ================= -->
+  <section id="projects" class="container">
+    <div class="section-head" data-reveal>
+      <span class="section-kicker">Projects</span>
+      <h2 class="section-title">项目</h2>
+      <p class="section-sub">共 13 个公开仓库，含自研项目与 Fork 的项目；点击卡片可跳转 GitHub 仓库页。</p>
+    </div>
+
+    <div class="filters" id="filters" role="group" aria-label="项目筛选" data-stagger>
+      <!-- 由 JS 渲染 -->
+    </div>
+
+    <div class="grid" id="repoGrid" data-stagger><!-- 由 JS 渲染 --></div>
+    <div class="empty-hint" id="emptyHint">当前筛选条件下没有匹配的仓库。</div>
+  </section>
+
+  <!-- ================= 6. GitHub 数据概览 ================= -->
+  <section id="stats" class="container">
+    <div class="section-head" data-reveal>
+      <span class="section-kicker">Overview</span>
+      <h2 class="section-title">GitHub 数据概览</h2>
+    </div>
+    <div class="card stats-wrap reveal" id="statsCard">
+      <canvas id="stats-canvas" aria-hidden="true"></canvas>
+      <div class="stats-head">
+        <p class="section-sub" style="margin:0">以下为 GitHub 公开数据快照。</p>
+      </div>
+      <div class="stats-grid" id="statsGrid" data-stagger>
+        <div class="stat"><div class="stat-num grad-text" data-count="13">0</div><div class="stat-label">公开仓库</div></div>
+        <div class="stat"><div class="stat-num grad-text" data-count="6">0</div><div class="stat-label">Followers</div></div>
+        <div class="stat"><div class="stat-num grad-text" data-count="11">0</div><div class="stat-label">Following</div></div>
+        <div class="stat"><div class="stat-num grad-text" data-count="2017">0</div><div class="stat-label">加入 GitHub 年份</div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ================= 7. 页脚 ================= -->
+<footer class="footer"><div class="container reveal">
+  <p style="margin:0 0 6px">© 2026 <strong>Cx330.</strong> · GitHub: <strong>Serein1202</strong></p>
+  <p style="margin:0">本页由 GitHub 公开数据生成</p>
+</div></footer>
+
+<button class="to-top" id="toTop" type="button" aria-label="回到顶部">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M12 19V5M5 12l7-7 7 7"/>
+  </svg>
+</button>
+
+<script>
+/* =========================================================================
+   数据集中定义区（便于后续维护）
+   -------------------------------------------------------------------------
+   name 仓库名 / desc 简介（空串表示无描述）/ lang 主语言（null = 无语言）
+   stars ★ 数 / forks fork 数（未采集到可靠数据，统一 null，页面不展示）
+   updated 最近更新 / license License（null = 无）/ forkFrom Fork 来源
+   origin 'self' 自研 | 'fork' Fork
+   ========================================================================= */
+const REPOS = [
+  {
+    name:"ProxyHome", origin:"self", lang:"JavaScript",
+    desc:"个人自用的 Clash / Loon 代理配置与增强脚本合集。含 ClashParty(YYDS Pro)、mihomo(Clash.Meta) 配置，Loon 主配置与规则，以及小米电视广告规则、微信小程序去广告、eCharge/星星充电去广告、今日油价查询、中石化去广告（测试中）等脚本。",
+    stars:1, forks:null, updated:"2026-09-24", license:null, forkFrom:null
+  },
+  { name:"AutoBan-TG", origin:"self", lang:"Python",
+    desc:"自动拉黑脚本，避免被 Telegram 私聊广告打扰。",
+    stars:0, forks:null, updated:"2026-07-16", license:"MIT", forkFrom:null },
+  { name:"feedsieve-community-api", origin:"self", lang:"JavaScript",
+    desc:"基于 feedsieve 项目、适用于 Tampermonkey 的 X（Twitter）垃圾账号清理脚本。",
+    stars:0, forks:null, updated:"2026-09-18", license:"MIT", forkFrom:null },
+  { name:"avogado6_pic", origin:"self", lang:"Python",
+    desc:"avogado6 插画图片获取脚本，仅供个人收藏，禁止商用。",
+    stars:0, forks:null, updated:"2026-03-09", license:null, forkFrom:null },
+  { name:"wloc-spoofer", origin:"self", lang:"JavaScript",
+    desc:"", /* 仓库无描述 */
+    stars:0, forks:null, updated:"2026-06-25", license:null, forkFrom:null },
+  { name:"Serein1202", origin:"self", lang:null,
+    desc:"GitHub 个人主页（Profile）配置仓库。",
+    stars:0, forks:null, updated:"2026-09-24", license:"MIT", forkFrom:null },
+  { name:"LynkCoHelper", origin:"fork", lang:"Python",
+    desc:"领克（Lynk & Co）车辆辅助工具（Fork）。",
+    stars:0, forks:null, updated:"2026-09-22", license:"MIT", forkFrom:"shovelshit/LynkCoHelper" },
+  { name:"Smartisan-Modern", origin:"fork", lang:"Java",
+    desc:"锤锤 Smartisan 的第三方现代 Xposed API 适配版，当前支持 libxposed API 102。",
+    stars:0, forks:null, updated:"2026-09-09", license:null, forkFrom:"lilu0826/Smartisan-Modern" },
+  { name:"telegram_private_chatbot", origin:"fork", lang:"JavaScript",
+    desc:"基于 CloudFlare 部署、高效极简的 Telegram 双向聊天机器人，防广告、防诈骗链接。",
+    stars:0, forks:null, updated:"2026-09-03", license:"MIT", forkFrom:"jikssha/telegram_private_chatbot" },
+  { name:"Sensitive-lexicon", origin:"fork", lang:null,
+    desc:"持续更新的中文敏感词库，帮助开发者与内容审核者识别并过滤不当文本。",
+    stars:0, forks:null, updated:"2026-08-26", license:"MIT", forkFrom:"konsheng/Sensitive-lexicon" },
+  { name:"Microsoft-Activation-Scripts", origin:"fork", lang:"Batchfile",
+    desc:"开源 Windows / Office 激活脚本，支持 HWID、Ohook、KMS38、Online KMS 等。",
+    stars:0, forks:null, updated:"2026-07-06", license:"GPL-3.0", forkFrom:"massgravel" },
+  { name:"trackerslist", origin:"fork", lang:null,
+    desc:"持续更新的公共 BitTorrent Tracker 列表。",
+    stars:0, forks:null, updated:"2026-06-30", license:"GPL-2.0", forkFrom:"ngosang" },
+  { name:"MaiMaiBot", origin:"fork", lang:"JavaScript",
+    desc:"通过 Streamable HTTP 调用麦当劳 MCP 工具的 Telegram 机器人。",
+    stars:0, forks:null, updated:"2026-04-18", license:null, forkFrom:"ButaiKirin/MaiMaiBot" }
+];
+
+/* GitHub 语言色（仅用于语言色点，非外部资源） */
+const LANG_COLORS = { "JavaScript":"#f1e05a", "Python":"#3572A5", "Java":"#b07219", "Batchfile":"#C1F12E" };
+const NO_LANG_COLOR = "#64748b";
+const GH_USER = "Serein1202";
+const GH_HOME = "https://github.com/" + GH_USER;
+
+/* 打字机动效文案（取自 GitHub 自述，不夸大） */
+const TYPED_LINES = [
+  "Hi \uD83D\uDC4B! My name is Cx330. and I'm a Amateur Coder, from China.",
+  "业余开发者 · 来自中国 · 专注代理规则与自动化脚本"
+];
+
+/* =========================================================================
+   工具函数 & 环境判定
+   ========================================================================= */
+const mqReduced  = window.matchMedia("(prefers-reduced-motion: reduce)");
+const mqFine     = window.matchMedia("(pointer: fine)");
+const isReduced  = () => mqReduced.matches;
+const isFine     = () => mqFine.matches;
+const desktop    = () => window.innerWidth >= 1024;
+/** 是否允许高级指针动效（桌面 + 精确指针 + 未开启减弱动效） */
+const cursorOK   = () => desktop() && isFine() && !isReduced();
+const lerp       = (a, b, t) => a + (b - a) * t;
+const clamp      = (v, min, max) => v < min ? min : (v > max ? max : v);
+const esc        = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const langColor  = lang => lang ? (LANG_COLORS[lang] || NO_LANG_COLOR) : NO_LANG_COLOR;
+const isOtherLang = lang => !["JavaScript","Python","Java"].includes(lang);
+
+/* =========================================================================
+   全局唯一 rAF 调度循环
+   -------------------------------------------------------------------------
+   所有逐帧任务（光标 / 粒子 / 视差 / tilt）都注册到这里；
+   当没有任何任务处于活跃状态时自动停止循环，事件到来时 wake() 重新启动。
+   ========================================================================= */
+const Ticker = (function(){
+  const tasks = new Set();
+  let rafId = null;
+
+  function frame(ts){
+    rafId = null;
+    if(document.hidden) return;                 // 页面隐藏：暂停循环
+    let activeCount = 0;
+    tasks.forEach(task => {
+      const active = task.isActive ? task.isActive(ts) : true;
+      if(active){ activeCount++; task.fn(ts); }
+    });
+    if(activeCount > 0) schedule();
+  }
+  function schedule(){ if(rafId === null) rafId = requestAnimationFrame(frame); }
+
+  document.addEventListener("visibilitychange", () => { if(!document.hidden) schedule(); });
+
+  return {
+    /** 注册任务：isActive 返回 false 时该任务被跳过（不消耗循环） */
+    add(fn, isActive){ const t = { fn, isActive }; tasks.add(t); schedule(); return t; },
+    remove(t){ tasks.delete(t); },
+    /** 唤醒循环（scroll / mousemove 等事件调用） */
+    wake: schedule
+  };
+})();
+
+/* =========================================================================
+   0. Preloader：品牌字逐字上浮 + 1px 渐变进度线（600ms）→ 淡出移除
+   ========================================================================= */
+const onReady = [];
+function whenLoaded(fn){ onReady.push(fn); }
+(function preloader(){
+  const el  = document.getElementById("preloader");
+  const bar = document.getElementById("preloaderBar");
+  if(!el){ onReady.forEach(f => f()); return; }
+
+  if(isReduced()){ el.remove(); onReady.forEach(f => f()); return; }
+
+  requestAnimationFrame(() => { bar.style.width = "100%"; });   // 600ms 过渡
+
+  let done = false;
+  function finish(){
+    if(done) return; done = true;
+    clearTimeout(hard);
+    setTimeout(() => {
+      el.classList.add("is-done");
+      onReady.forEach(f => f());
+      setTimeout(() => el.remove(), 320);
+    }, 300);
+  }
+  if(document.readyState === "complete") finish();
+  else window.addEventListener("load", finish, { once:true });
+  const hard = setTimeout(finish, 700);   // 兜底：最长 700ms 后也要进入页面
+})();
+
+/* =========================================================================
+   1. Hero 标题：逐字揭示（每字符独立 span，delay 40ms，总时长 ≤ 700ms）
+      同时为每个字符按整体宽度计算连续渐变（避免逐字重复渐变）
+   ========================================================================= */
+(function heroTitle(){
+  const h1 = document.getElementById("heroTitle");
+  if(!h1) return;
+  const text = h1.textContent.trim();
+  h1.textContent = "";
+  const chars = [];
+  [...text].forEach((c, i) => {
+    const s = document.createElement("span");
+    s.className = "ch";
+    s.textContent = c;
+    s.style.transitionDelay = Math.min(i * 40, 260) + "ms";
+    h1.appendChild(s); chars.push(s);
+  });
+
+  /* 连续渐变：按字形相对标题左端的偏移设置 background-position */
+  function paint(){
+    const base = h1.getBoundingClientRect();
+    const w = Math.max(base.width, 1), h = Math.max(base.height, 1);
+    chars.forEach(s => {
+      const r = s.getBoundingClientRect();
+      s.style.backgroundImage = "linear-gradient(135deg,#38bdf8 0%,#8b5cf6 100%)";
+      s.style.backgroundSize = w + "px " + h + "px";
+      s.style.backgroundPosition = "-" + (r.left - base.left).toFixed(2) + "px 0";
+      s.style.webkitBackgroundClip = "text";
+      s.style.backgroundClip = "text";
+      s.style.webkitTextFillColor = "transparent";
+      s.style.color = "transparent";
+    });
+  }
+  paint();
+
+  whenLoaded(() => { paint(); chars.forEach(s => s.classList.add("is-in")); });
+
+  let rt = null;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(paint, 160); }, { passive:true });
+})();
+
+/* =========================================================================
+   2. 打字机（多行轮播，删除快于打字）
+   ========================================================================= */
+whenLoaded(function typing(){
+  const el = document.getElementById("typed");
+  if(!el) return;
+  let li = 0, ci = 0, deleting = false;
+  const T = 55, DEL = 26, HOLD = 1900;      // 删除间隔 < 打字间隔
+  (function tick(){
+    const str = TYPED_LINES[li];
+    if(!deleting){
+      el.textContent = str.slice(0, ++ci);
+      if(ci === str.length){ deleting = true; return setTimeout(tick, HOLD); }
+      return setTimeout(tick, T);
+    }
+    el.textContent = str.slice(0, --ci);
+    if(ci === 0){ deleting = false; li = (li + 1) % TYPED_LINES.length; return setTimeout(tick, 320); }
+    setTimeout(tick, DEL);
+  })();
+});
+
+/* =========================================================================
+   3. 头像加载失败兜底：字母 “C” 渐变块
+   ========================================================================= */
+(function avatarFallback(){
+  const img = document.getElementById("avatarImg");
+  const box = document.getElementById("avatarBox");
+  if(!img || !box) return;
+  img.addEventListener("error", () => { box.innerHTML = '<div class="avatar-fallback"><span>C</span></div>'; });
+})();
+
+/* =========================================================================
+   4. 渲染：技能占比条
+   ========================================================================= */
+(function renderSkills(){
+  const box = document.getElementById("skillBars");
+  if(!box) return;
+  const counts = {};
+  REPOS.forEach(r => { if(r.lang) counts[r.lang] = (counts[r.lang] || 0) + 1; });
+  const total = Object.keys(counts).reduce((s, k) => s + counts[k], 0);
+  const order = ["JavaScript","Python","Java","Batchfile"];
+
+  box.innerHTML = order.filter(k => counts[k]).map((k, i) => {
+    const count = counts[k];
+    const share = Math.round(count / total * 1000) / 10;
+    const width = Math.max(share, 6);
+    return ''
+      + '<div class="skill">'
+      +   '<div class="skill-top">'
+      +     '<span class="skill-name"><i class="lang-dot" style="background:' + (LANG_COLORS[k] || NO_LANG_COLOR) + '"></i>' + k + '</span>'
+      +     '<span class="skill-count">' + count + ' 个仓库 · ' + share + '%</span>'
+      +   '</div>'
+      +   '<div class="bar"><div class="bar-fill" data-width="' + width + '" data-delay="' + (i * 100) + '"></div></div>'
+      + '</div>';
+  }).join("");
+})();
+
+/* =========================================================================
+   5. 渲染：项目卡片 + 筛选
+   ========================================================================= */
+const FILTERS = [
+  { key:"all",        label:"全部",       test:() => true },
+  { key:"self",       label:"自研",       test:r => r.origin === "self" },
+  { key:"fork",       label:"Fork",       test:r => r.origin === "fork" },
+  { key:"JavaScript", label:"JavaScript", test:r => r.lang === "JavaScript" },
+  { key:"Python",     label:"Python",     test:r => r.lang === "Python" },
+  { key:"Java",       label:"Java",       test:r => r.lang === "Java" },
+  { key:"other",      label:"其他",       test:r => !r.lang || isOtherLang(r.lang) }
+];
+
+(function renderProjects(){
+  const filtersEl = document.getElementById("filters");
+  const gridEl    = document.getElementById("repoGrid");
+  const emptyEl   = document.getElementById("emptyHint");
+  if(!filtersEl || !gridEl) return;
+
+  function cardHTML(r){
+    const url  = GH_HOME + "/" + encodeURIComponent(r.name);
+    const meta = [];
+    meta.push('<span><i class="lang-dot" style="background:' + langColor(r.lang) + '"></i>' + (r.lang ? esc(r.lang) : "无语言") + '</span>');
+    meta.push('<span>★ ' + r.stars + '</span>');
+    if(r.forks !== null && r.forks !== undefined) meta.push('<span>Fork ' + r.forks + '</span>');
+    meta.push('<span>更新 ' + esc(r.updated) + '</span>');
+    return ''
+      + '<a class="card repo stagger-item" href="' + url + '" target="_blank" rel="noopener"'
+      +    ' data-origin="' + r.origin + '" data-lang="' + (r.lang || "") + '">'
+      +   '<div class="repo-head">'
+      +     '<span class="repo-name">' + esc(r.name) + '</span>'
+      +     '<span class="badge ' + (r.origin === "self" ? "badge-self" : "badge-fork") + '">'
+      +       (r.origin === "self" ? "自研" : "Fork") + '</span>'
+      +   '</div>'
+      +   '<p class="' + (r.desc ? "repo-desc" : "repo-desc is-empty") + '">' + (r.desc ? esc(r.desc) : "暂无描述") + '</p>'
+      +   '<div class="repo-meta">' + meta.join("") + '</div>'
+      +   (r.forkFrom ? '<p class="fork-from">Fork 自 ' + esc(r.forkFrom) + '</p>' : '')
+      +   '<div class="repo-foot">'
+      +     '<span class="license">' + (r.license ? esc(r.license) : "无 License") + '</span>'
+      +     '<span>' + (r.origin === "self" ? "自研项目" : "来源仓库 Fork") + '</span>'
+      +   '</div>'
+      + '</a>';
+  }
+
+  filtersEl.innerHTML = FILTERS.map((f, i) => {
+    const n = REPOS.filter(f.test).length;
+    return '<button class="filter-btn stagger-item' + (f.key === "all" ? " is-active" : "") + '" type="button"'
+      + ' data-filter="' + f.key + '" style="--d:' + (i * 40) + 'ms">' + f.label
+      + '<span class="cnt">' + n + '</span></button>';
+  }).join("");
+
+  gridEl.innerHTML = REPOS.map((r, i) =>
+    cardHTML(r).replace('class="card repo stagger-item"', 'class="card repo stagger-item" style="--d:' + (Math.min(i, 11) * 60) + 'ms"')
+  ).join("");
+
+  const cardData = c => ({ origin:c.dataset.origin, lang:c.dataset.lang || null });
+
+  /* ---------- FLIP 筛选动画 ---------- */
+  filtersEl.addEventListener("click", e => {
+    const btn = e.target.closest(".filter-btn");
+    if(!btn) return;
+    filtersEl.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("is-active"));
+    btn.classList.add("is-active");
+
+    const conf  = FILTERS.find(f => f.key === btn.dataset.filter) || FILTERS[0];
+    const cards = [...gridEl.querySelectorAll(".repo")];
+
+    // 1) 记录旧位置（可见卡片）
+    const first = new Map();
+    cards.forEach(c => { if(c.style.display !== "none") first.set(c, c.getBoundingClientRect()); });
+
+    // 2) 分类
+    const entering = [], leaving = [], staying = [];
+    cards.forEach(c => {
+      const ok    = conf.test(cardData(c));
+      const shown = c.style.display !== "none";
+      if(ok && !shown)       entering.push(c);
+      else if(!ok && shown)  leaving.push(c);
+      else if(ok && shown)   staying.push(c);
+    });
+
+    // 3) 退场：淡出 + scale(0.96)
+    leaving.forEach(c => c.classList.add("is-leaving"));
+
+    // 4) 入场：确保已通过入场动画（避免 opacity:0 卡住），再播放进入过渡
+    entering.forEach(c => {
+      c.classList.add("is-visible");
+      c.style.display = "";
+      c.classList.add("is-entering");
+      void c.offsetWidth;                       // 强制回流，保证过渡生效
+      c.classList.remove("is-entering");
+    });
+
+    // 5) 仍在展示的卡片：transform 补间到新位置（400ms）
+    void gridEl.offsetWidth;
+    staying.forEach(c => {
+      const f = first.get(c); if(!f) return;
+      const l = c.getBoundingClientRect();
+      const dx = f.left - l.left, dy = f.top - l.top;
+      if(Math.abs(dx) < .5 && Math.abs(dy) < .5) return;
+      c.style.transition = "none";
+      c.style.transform  = "translate(" + dx + "px," + dy + "px)";
+      void c.offsetWidth;
+      c.style.transition = "transform 400ms cubic-bezier(.4,0,.2,1)";
+      c.style.transform  = "";
+      setTimeout(() => { c.style.transition = ""; }, 420);
+    });
+
+    // 6) 退场卡片动画结束后隐藏
+    setTimeout(() => {
+      leaving.forEach(c => { c.style.display = "none"; c.classList.remove("is-leaving"); });
+    }, 300);
+
+    // 7) 空结果提示
+    const visible = cards.filter(c => c.style.display !== "none" && !leaving.includes(c)).length;
+    emptyEl.classList.toggle("is-open", visible === 0);
+  });
+})();
+
+/* =========================================================================
+   6. 进入视口：通用 reveal + 容器内交错（stagger 80ms，距离阈值 0.15，只播一次）
+   ========================================================================= */
+(function reveal(){
+  const singles  = [...document.querySelectorAll(".reveal, [data-reveal]")];
+  const staggerC = [...document.querySelectorAll("[data-stagger]")];
+
+  // 给交错容器的子元素分配延迟
+  staggerC.forEach(box => {
+    [...box.children].forEach((child, i) => {
+      child.classList.add("stagger-item");
+      child.style.setProperty("--d", (i * 80) + "ms");
+    });
+  });
+  const staggerItems = [...document.querySelectorAll(".stagger-item")];
+
+  if(!("IntersectionObserver" in window)){
+    singles.forEach(el => el.classList.add("is-visible"));
+    staggerItems.forEach(el => el.classList.add("is-visible"));
+    return;
+  }
+  const io = new IntersectionObserver((entries, obs) => {
+    entries.forEach(en => {
+      if(en.isIntersecting){
+        en.target.classList.add("is-visible");
+        obs.unobserve(en.target);
+        // 交错入场结束后清除延迟，避免影响后续交互过渡
+        if(en.target.classList.contains("stagger-item")){
+          const d = parseInt(en.target.style.getPropertyValue("--d") || "0", 10) || 0;
+          setTimeout(() => en.target.classList.add("stagger-done"), d + 460);
+        }
+        if(en.target.id === "skillsCard") animateSkillBars();
+        if(en.target.id === "statsCard")  animateStats();
+      }
+    });
+  }, { threshold:.15, rootMargin:"0px 0px -40px 0px" });
+
+  singles.forEach(el => io.observe(el));
+  staggerItems.forEach(el => io.observe(el));
+})();
+
+/* ---------- 技能条：进入视口后宽度增长（700ms，交错 100ms）+ 流动光泽 ---------- */
+function animateSkillBars(){
+  document.querySelectorAll("#skillBars .bar-fill").forEach(el => {
+    const delay = parseInt(el.dataset.delay || "0", 10);
+    setTimeout(() => {
+      el.style.width = el.dataset.width + "%";
+      el.classList.add("is-live");
+    }, delay);
+  });
+}
+
+/* ---------- 概览数字：count-up（1.2s easeOutCubic） ---------- */
+function animateStats(){
+  const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+  document.querySelectorAll("#statsGrid .stat-num").forEach((el, i) => {
+    const target = parseInt(el.dataset.count, 10) || 0;
+    const dur = 1200, start = performance.now() + i * 90;
+    const task = Ticker.add(function(now){
+      const t = clamp((now - start) / dur, 0, 1);
+      el.textContent = Math.round(target * easeOutCubic(t));   // 直接整数递增，2017 不做千分位
+      if(t >= 1){ el.textContent = target; Ticker.remove(task); }
+    }, now => now >= start);
+  });
+}
+
+/* =========================================================================
+   7. 导航：进度条 / 毛玻璃 / 滑块 scroll-spy / 回到顶部
+   ========================================================================= */
+(function nav(){
+  const nav     = document.getElementById("siteNav");
+  const progress= document.getElementById("progressBar");
+  const slider  = document.getElementById("navSlider");
+  const links   = [...document.querySelectorAll("#navLinks a")];
+  const sections= ["about","skills","projects","stats"].map(id => document.getElementById(id)).filter(Boolean);
+  const toTop   = document.getElementById("toTop");
+
+  let scrollDirty = true;
+  window.addEventListener("scroll", () => { scrollDirty = true; Ticker.wake(); }, { passive:true });
+
+  function moveSlider(){
+    const active = sections.filter(s => s.offsetTop - 150 <= window.scrollY).pop();
+    if(!active){ slider.classList.remove("is-on"); links.forEach(l => l.classList.remove("is-current")); return; }
+    const link = links.find(l => l.dataset.target === active.id);
+    if(!link) return;
+    links.forEach(l => l.classList.toggle("is-current", l === link));
+    slider.classList.add("is-on");
+    slider.style.width = link.offsetWidth + "px";
+    slider.style.transform = "translateX(" + link.offsetLeft + "px)";
+  }
+
+  function update(){
+    const y = window.scrollY;
+    const max = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+    progress.style.transform = "scaleX(" + clamp(y / max, 0, 1) + ")";
+    nav.classList.toggle("is-scrolled", y > 12);
+    toTop.classList.toggle("is-on", y > 600);
+    moveSlider();
+  }
+
+  Ticker.add(() => { if(!scrollDirty) return; scrollDirty = false; update(); });
+  update();
+
+  // 移动端折叠
+  const toggle = document.getElementById("navToggle");
+  const panel  = document.getElementById("navPanel");
+  if(toggle && panel){
+    toggle.addEventListener("click", () => {
+      const open = panel.classList.toggle("is-open");
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      toggle.setAttribute("aria-label", open ? "收起导航" : "展开导航");
+    });
+    panel.addEventListener("click", e => {
+      if(e.target.tagName === "A"){
+        panel.classList.remove("is-open");
+        toggle.setAttribute("aria-expanded","false");
+      }
+    });
+  }
+
+  toTop.addEventListener("click", () => window.scrollTo({ top:0, behavior: isReduced() ? "auto" : "smooth" }));
+
+  let rt = null;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { scrollDirty = true; Ticker.wake(); }, 150); }, { passive:true });
+})();
+
+/* =========================================================================
+   8. 项目卡片 3D tilt + 鼠标径向高光（桌面端，触屏 / reduced 禁用）
+   ========================================================================= */
+(function cardTilt(){
+  const grid = document.getElementById("repoGrid");
+  if(!grid) return;
+
+  const states = new Map();     // card -> {rx,ry,ty,tx,ty_,...目标值与当前值}
+  let hovered = null;
+
+  function ensure(card){
+    if(!states.has(card)) states.set(card, { rx:0, ry:0, ty:0, tRx:0, tRy:0, tTy:0, mx:50, my:50 });
+    return states.get(card);
+  }
+
+  function enabled(){ return cursorOK() && !isReduced(); }
+
+  grid.addEventListener("mouseover", e => {
+    const card = e.target.closest(".repo");
+    if(!enabled() || !card) return;
+    const st = ensure(card);
+    if(hovered === card) return;
+    hovered = card; st.tTy = -4;
+    card.classList.add("is-tilting");          // 关闭 transform 过渡，交由逐帧 lerp
+    card.style.willChange = "transform";
+  }, { passive:true });
+
+  grid.addEventListener("mousemove", e => {
+    if(!enabled()) return;
+    const card = e.target.closest(".repo");
+    if(!card) return;
+    const st = ensure(card), r = card.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width;
+    const py = (e.clientY - r.top) / r.height;
+    st.tRy = (px - .5) * 12;        // 最大 ±6°
+    st.tRx = (.5 - py) * 12;        // 最大 ±6°
+    st.mx = px * 100; st.my = py * 100;
+  }, { passive:true });
+
+  grid.addEventListener("mouseout", e => {
+    const card = e.target.closest(".repo");
+    if(!card) return;
+    if(e.relatedTarget && card.contains(e.relatedTarget)) return;
+    const st = states.get(card); if(st){ st.tRx = 0; st.tRy = 0; st.tTy = 0; }
+    if(hovered === card) hovered = null;
+  }, { passive:true });
+
+  // 单帧任务：只在存在未归零的卡片时保持活跃
+  let active = false;
+  Ticker.add(() => {
+    let busy = false;
+    states.forEach((st, card) => {
+      st.rx = lerp(st.rx, st.tRx, .18);
+      st.ry = lerp(st.ry, st.tRy, .18);
+      st.ty = lerp(st.ty, st.tTy, .18);
+      const settled = Math.abs(st.rx - st.tRx) < .01 && Math.abs(st.ry - st.tRy) < .01
+                   && Math.abs(st.ty - st.tTy) < .02;
+      if(settled){ st.rx = st.tRx; st.ry = st.tRy; st.ty = st.tTy; }
+      else busy = true;
+
+      card.style.setProperty("--rx", st.rx.toFixed(3) + "deg");
+      card.style.setProperty("--ry", st.ry.toFixed(3) + "deg");
+      card.style.setProperty("--ty", st.ty.toFixed(2) + "px");
+      card.style.setProperty("--mx", st.mx.toFixed(1) + "%");
+      card.style.setProperty("--my", st.my.toFixed(1) + "%");
+
+      if(settled && st.tRx === 0 && st.tRy === 0 && st.tTy === 0){
+        card.style.willChange = "";       // 动画结束移除 will-change
+        card.classList.remove("is-tilting");
+        states.delete(card);
+      }
+    });
+    active = busy;
+  }, () => active);
+})();
+
+/* =========================================================================
+   9. 自定义光标光晕 + 磁吸按钮 + 按钮高光（仅桌面端）
+   ========================================================================= */
+(function cursorGlow(){
+  const mqHover = window.matchMedia("(hover: hover)");
+  const okNow   = () => desktop() && isFine() && mqHover.matches && !isReduced();
+
+  let el = null;                  // 光晕节点：不满足启用条件时不存在
+  let pending = false;            // 是否有待写入的坐标
+  let px = 0, py = 0;             // 最近一次指针位置（视口坐标）
+  let seen = false;               // 指针是否已进入窗口
+
+  function create(){
+    el = document.createElement("div");
+    el.id = "cursorGlow";
+    el.setAttribute("aria-hidden", "true");
+    document.body.appendChild(el);
+  }
+  function destroy(){
+    if(el){ el.remove(); el = null; }
+    seen = false; pending = false;
+    document.body.classList.remove("cur-seen", "cur-hot", "cur-press");
+  }
+  function sync(){
+    const ok = okNow();
+    if(ok && !el) create();
+    else if(!ok && el) destroy();
+  }
+  sync();
+  window.addEventListener("resize", sync, { passive:true });
+  mqReduced.addEventListener("change", sync);
+  mqFine.addEventListener("change", sync);
+  mqHover.addEventListener("change", sync);
+
+  /* 指针移动：只记录坐标，位移写入合并到帧内（无插值/缓动，与系统指针同帧到达） */
+  window.addEventListener("pointermove", e => {
+    if(!el) return;
+    px = e.clientX; py = e.clientY;
+    if(!seen){ seen = true; document.body.classList.add("cur-seen"); }
+    if(!pending){ pending = true; Ticker.wake(); }
+  }, { passive:true });
+
+  // 每帧最多写一次位移；无待写坐标时该任务不活跃，循环自动停摆
+  Ticker.add(() => {
+    if(el && pending){ pending = false; el.style.translate = px + "px " + py + "px"; }
+  }, () => !!el && pending);
+
+  /* 悬停反馈：事件委托 → body.cur-hot（放大 2.4 倍） */
+  document.addEventListener("pointerover", e => {
+    if(!el) return;
+    const t = e.target;
+    if(!t || !t.closest) return;
+    document.body.classList.toggle("cur-hot", !!t.closest("a, button, .repo, .stat, [data-cursor]"));
+  }, { passive:true });
+
+  /* 按下反馈：body.cur-press（缩至 0.7）+ 按下点一次性涟漪 */
+  function ripple(x, y){
+    const r = document.createElement("span");
+    r.className = "cursor-ripple";
+    r.setAttribute("aria-hidden", "true");
+    r.style.translate = x + "px " + y + "px";
+    document.body.appendChild(r);
+    let gone = false;
+    const kill = () => { if(gone) return; gone = true; r.remove(); };
+    r.addEventListener("animationend", kill, { once:true });
+    setTimeout(kill, 600);                        // 兜底：动画未触发也要移除
+  }
+  window.addEventListener("pointerdown", e => {
+    if(!el) return;
+    document.body.classList.add("cur-press");
+    ripple(e.clientX, e.clientY);
+  }, { passive:true });
+  window.addEventListener("pointerup", () => {
+    if(el) document.body.classList.remove("cur-press");
+  }, { passive:true });
+
+  /* 指针移出窗口 / 窗口失焦 → 淡出；移入 / 聚焦 → 淡入 */
+  document.addEventListener("mouseleave", () => { if(el) document.body.classList.remove("cur-seen"); });
+  document.addEventListener("mouseenter", () => { if(el && seen) document.body.classList.add("cur-seen"); });
+  window.addEventListener("blur",  () => { if(el) document.body.classList.remove("cur-seen"); });
+  window.addEventListener("focus", () => { if(el && seen) document.body.classList.add("cur-seen"); });
+
+  /* ---------- 磁吸主按钮（位移上限 6px，系数 0.2，离开 300ms 弹性回位） ---------- */
+  document.querySelectorAll(".btn-primary").forEach(btn => {
+    btn.addEventListener("mousemove", e => {
+      if(!cursorOK()) return;
+      const r = btn.getBoundingClientRect();
+      const ox = clamp((e.clientX - (r.left + r.width / 2)) * .2, -6, 6);
+      const oy = clamp((e.clientY - (r.top + r.height / 2)) * .2, -6, 6);
+      btn.style.setProperty("--mag-x", ox.toFixed(2) + "px");
+      btn.style.setProperty("--mag-y", oy.toFixed(2) + "px");
+    }, { passive:true });
+    btn.addEventListener("mouseleave", () => {
+      btn.style.setProperty("--mag-x", "0px");
+      btn.style.setProperty("--mag-y", "0px");
+    }, { passive:true });
+  });
+
+  /* ---------- 按钮内高光跟随 ---------- */
+  document.querySelectorAll(".btn").forEach(btn => {
+    btn.addEventListener("mousemove", e => {
+      const r = btn.getBoundingClientRect();
+      btn.style.setProperty("--mx", (((e.clientX - r.left) / r.width) * 100).toFixed(1) + "%");
+      btn.style.setProperty("--my", (((e.clientY - r.top) / r.height) * 100).toFixed(1) + "%");
+    }, { passive:true });
+  });
+})();
+
+/* =========================================================================
+   10. Hero 极光粒子网络（Canvas + 鼠标 / 滚动视差）
+   ========================================================================= */
+(function heroAurora(){
+  const cv      = document.getElementById("heroCanvas");
+  const section = document.getElementById("heroSection");
+  const content = document.getElementById("heroContent");
+  if(!cv || !section || !content) return;
+  if(isReduced()) return;                       // 减弱动效：不启动粒子
+
+  const ctx = cv.getContext("2d");
+  if(!ctx) return;
+
+  const COL_A = [56,189,248], COL_B = [139,92,246];
+  let W = 0, H = 0, pts = [], inView = true;
+  let mx = 0, my = 0;                            // 鼠标视差偏移
+  let scrollY = 0;
+
+  /* 预渲染发光精灵，避免逐帧创建径向渐变 */
+  function sprite(rgb){
+    const s = document.createElement("canvas"), S = 32;
+    s.width = s.height = S;
+    const c = s.getContext("2d");
+    const g = c.createRadialGradient(S/2, S/2, 0, S/2, S/2, S/2);
+    g.addColorStop(0,    "rgba(" + rgb.join(",") + ",.95)");
+    g.addColorStop(.35,  "rgba(" + rgb.join(",") + ",.42)");
+    g.addColorStop(1,    "rgba(" + rgb.join(",") + ",0)");
+    c.fillStyle = g; c.fillRect(0, 0, S, S);
+    return s;
+  }
+  const SP_A = sprite(COL_A), SP_B = sprite(COL_B);
+
+  /* 桌面 60 / 窄屏或触屏 24 */
+  function count(){ return (window.innerWidth < 768 || !isFine()) ? 24 : 60; }
+
+  function build(){
+    const r = cv.getBoundingClientRect();
+    const dpr = clamp(window.devicePixelRatio || 1, 1, 2);
+    W = Math.max(r.width, 1); H = Math.max(r.height, 1);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const n = count();
+    pts = [];
+    for(let i = 0; i < n; i++){
+      pts.push({
+        x: Math.random() * W, y: Math.random() * H,
+        vx: (Math.random() - .5) * .18, vy: (Math.random() - .5) * .18,
+        r: 1.4 + Math.random() * 1.8,
+        t: Math.random()                       // 颜色插值系数
+      });
+    }
+  }
+  build();
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+
+    // 漂移 + 环绕
+    pts.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if(p.x < -20) p.x = W + 20; else if(p.x > W + 20) p.x = -20;
+      if(p.y < -20) p.y = H + 20; else if(p.y > H + 20) p.y = -20;
+    });
+
+    // 连线（距离 < 120px，半透明渐变）
+    for(let i = 0; i < pts.length; i++){
+      for(let j = i + 1; j < pts.length; j++){
+        const a = pts[i], b = pts[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d2 = dx * dx + dy * dy;
+        if(d2 > 14400) continue;                       // 120^2
+        const d = Math.sqrt(d2);
+        const alpha = .30 * (1 - d / 120);
+        const t = (a.t + b.t) / 2;
+        const R = Math.round(lerp(COL_A[0], COL_B[0], t));
+        const G = Math.round(lerp(COL_A[1], COL_B[1], t));
+        const B = Math.round(lerp(COL_A[2], COL_B[2], t));
+        ctx.strokeStyle = "rgba(" + R + "," + G + "," + B + "," + alpha.toFixed(3) + ")";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+    // 粒子发光
+    pts.forEach(p => {
+      const sp = p.t < .5 ? SP_A : SP_B;
+      const size = p.r * 9;
+      ctx.globalAlpha = .85;
+      ctx.drawImage(sp, p.x - size / 2, p.y - size / 2, size, size);
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  // 鼠标 / 滚动视差（整体位移，均为 passive + 帧内合并处理）
+  let viewDirty = true;
+  window.addEventListener("mousemove", e => {
+    mx = (e.clientX - window.innerWidth / 2) * .02;
+    my = (e.clientY - window.innerHeight / 2) * .02;
+    viewDirty = true; Ticker.wake();
+  }, { passive:true });
+
+  window.addEventListener("scroll", () => { viewDirty = true; Ticker.wake(); }, { passive:true });
+
+  // resize 防抖重建（DPR / 尺寸变化）
+  let rt = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => { build(); viewDirty = true; Ticker.wake(); }, 200);
+  }, { passive:true });
+
+  // 只有 Hero 在视口内时才驱动逐帧任务
+  if("IntersectionObserver" in window){
+    new IntersectionObserver(es => { inView = es[0].isIntersecting; Ticker.wake(); }).observe(section);
+  }
+
+  Ticker.add(() => {
+    if(!inView) return;                                  // 离开视口 → 任务失活，循环可停
+
+    if(viewDirty){
+      viewDirty = false;
+      scrollY = window.scrollY;
+      const h = section.offsetHeight || 1;
+      const k = clamp(scrollY / h, 0, 1);
+      // 背景：鼠标视差 + 滚动反向位移（系数 0.15）
+      cv.style.transform = "translate3d(" + mx.toFixed(2) + "px," + (scrollY * .15 + my).toFixed(2) + "px,0)";
+      // 内容：轻微上移 + 透明度衰减（因子 0.35）
+      content.style.transform = "translate3d(0," + (-Math.min(scrollY * .35, 220)).toFixed(2) + "px,0)";
+      content.style.opacity = String(clamp(1 - k * .85, 0, 1));
+    }
+    draw();
+  }, () => inView);
+})();
+
+/* =========================================================================
+   11. 统计卡片装饰构图（静态绘制，无外部图表库）
+   ========================================================================= */
+(function canvasArt(){
+  const cv = document.getElementById("stats-canvas");
+  if(!cv) return;
+  const ctx = cv.getContext("2d");
+  if(!ctx) return;
+  let seed = 20260924;
+  const rand = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+
+  function draw(){
+    const rect = cv.getBoundingClientRect();
+    const dpr = clamp(window.devicePixelRatio || 1, 1, 2);
+    const w = Math.max(rect.width, 1), h = Math.max(rect.height, 1);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    seed = 20260924;
+    const N = Math.max(14, Math.min(34, Math.round(w / 38)));
+    const pts = [];
+    for(let i = 0; i < N; i++) pts.push({ x: rand() * w, y: rand() * h, r: .9 + rand() * 1.9 });
+
+    for(let i = 0; i < N; i++){
+      for(let j = i + 1; j < N; j++){
+        const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if(d < 130){
+          ctx.strokeStyle = "rgba(56,189,248," + (.16 * (1 - d / 130)).toFixed(3) + ")";
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke();
+        }
+      }
+    }
+    pts.forEach((p, i) => {
+      ctx.fillStyle = i % 3 === 0 ? "rgba(139,92,246,.75)" : "rgba(56,189,248,.7)";
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+  draw();
+  let t = null;
+  window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(draw, 180); }, { passive:true });
+})();
+</script>
+</body>
+</html>
