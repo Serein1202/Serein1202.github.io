@@ -400,35 +400,11 @@
   .to-top svg{ width:18px; height:18px; }
 
   /* =========================================================================
-     自定义光标光晕（即时跟随，不做插值）
-     系统光标保留不隐藏；元素仅在 hover:hover + 精确指针 + ≥1024px 且未开启
-     减弱动效时由 JS 创建，不满足条件时 DOM 中不存在任何光标节点
+     鼠标光效
+     已改用 ba-click-fx（蔚蓝档案风格点击圆环 / 碎片 / 光标拖尾），
+     由页面底部 </body> 前的 CDN ESM 脚本创建全屏覆盖层，此处不再定义样式。
+     系统光标始终保留（不隐藏、不替换），文本选择与输入框行为不受影响。
      ========================================================================= */
-  #cursorGlow{
-    position:fixed; left:0; top:0; z-index:300; pointer-events:none;
-    width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%;
-    background:radial-gradient(circle, rgba(56,189,248,.95) 0%, rgba(139,92,246,.55) 45%, transparent 72%);
-    filter:blur(2px); mix-blend-mode:screen;
-    opacity:0; scale:1;
-    transition:opacity 220ms ease-out, scale 180ms ease-out;
-    will-change:translate;
-  }
-  body.cur-seen  #cursorGlow{ opacity:1; }
-  body.cur-hot   #cursorGlow{ scale:2.4; }
-  body.cur-press #cursorGlow{ scale:.7; }
-
-  /* 按下点一次性涟漪：6px→40px 扩散 400ms 后自动移除，不累积节点 */
-  .cursor-ripple{
-    position:fixed; left:0; top:0; z-index:299; pointer-events:none;
-    width:6px; height:6px; margin:-3px 0 0 -3px; border-radius:50%;
-    border:1px solid rgba(56,189,248,.85); box-shadow:0 0 12px rgba(56,189,248,.35);
-    mix-blend-mode:screen; animation:cursorRipple 400ms ease-out forwards;
-  }
-  @keyframes cursorRipple{
-    from{ transform:scale(.6); opacity:.9; }
-    to  { transform:scale(6.7); opacity:0; }
-  }
-  /* 系统光标始终保留（不隐藏、不替换），文本选择与输入框行为不受影响 */
 
   /* =========================================================================
      进入视口动画（通用 + 交错）
@@ -484,7 +460,6 @@
     .reveal,.stagger-item{ opacity:1; transform:none; }
     .section-title{ clip-path:none; }
     .hero h1 .ch{ transform:none; opacity:1; filter:none; }
-    #cursorGlow,.cursor-ripple{ display:none; }
   }
 </style>
 </head>
@@ -562,14 +537,14 @@
     <div class="section-head" data-reveal>
       <span class="section-kicker">About</span>
       <h2 class="section-title">关于我</h2>
-      <p class="section-sub">以下内容依据 GitHub 公开信息整理。</p>
+      <p class="section-sub">下面这些，都是从 GitHub 上公开的信息里扒出来的。</p>
     </div>
     <div class="card about-body reveal">
-      <p>Cx330.（GitHub：<strong>@Serein1202</strong>）自 2017 年 11 月起在 GitHub 维护个人项目，以业余开发者（Amateur Coder）身份持续投入脚本工具与自动化方向的实践。</p>
-      <p>项目内容主要集中于网络代理配置与规则维护（Clash / Loon）、广告及垃圾信息过滤、Telegram 与 X 平台的消息自动化处理，以及数据抓取与日常实用工具。多数项目源于个人使用需求，完成后以开源形式发布，既便于自身复用，也为有同类需求的开发者提供参考。</p>
+      <p>嗨，我是 Cx330.，GitHub 上的 ID 是 <strong>@Serein1202</strong>。算是个业余开发者（Amateur Coder），平时就爱折腾脚本和各种自动化的东西。2017 年 11 月开始把自己的项目往 GitHub 上放，一直断断续续弄到现在。</p>
+      <p>做的项目其实挺杂的：网络代理的配置和规则维护（Clash / Loon）、拦一拦广告和垃圾信息、Telegram 和 X 上的消息自动化，还有抓数据跟一些平时用得上的小工具。说白了，大部分都是我自己有需求才动手写的，写完了顺手开源出来——以后自己好复用，要是别人也碰上一样的麻烦，拿去用就行。</p>
       <ul class="about-list" data-stagger>
-        <li>自研项目覆盖代理工具配置、平台内容治理、图片抓取与聊天机器人等方向，均以个人自用为前提开发。</li>
-        <li>同时通过 Fork 参与部分开源项目的适配与维护，涉及 Xposed 模块适配、Windows 相关脚本、公共 Tracker 列表等。</li>
+        <li>自己写的项目主要集中在代理工具配置、平台内容治理、图片抓取和聊天机器人这几块，出发点都是「我自己要用」。</li>
+        <li>也 Fork 过一些开源项目，帮着做适配和维护，比如 Xposed 模块适配、Windows 相关脚本、公共 Tracker 列表这些。</li>
       </ul>
     </div>
   </section>
@@ -1200,87 +1175,11 @@ function animateStats(){
 })();
 
 /* =========================================================================
-   9. 自定义光标光晕 + 磁吸按钮 + 按钮高光（仅桌面端）
+   9. 磁吸按钮 + 按钮高光（仅桌面端）
+   鼠标光效已改用 ba-click-fx（蔚蓝档案风格点击圆环 / 碎片 / 光标拖尾），
+   由页面底部 </body> 前的 CDN ESM 脚本创建全屏覆盖层。
    ========================================================================= */
-(function cursorGlow(){
-  const mqHover = window.matchMedia("(hover: hover)");
-  const okNow   = () => desktop() && isFine() && mqHover.matches && !isReduced();
-
-  let el = null;                  // 光晕节点：不满足启用条件时不存在
-  let pending = false;            // 是否有待写入的坐标
-  let px = 0, py = 0;             // 最近一次指针位置（视口坐标）
-  let seen = false;               // 指针是否已进入窗口
-
-  function create(){
-    el = document.createElement("div");
-    el.id = "cursorGlow";
-    el.setAttribute("aria-hidden", "true");
-    document.body.appendChild(el);
-  }
-  function destroy(){
-    if(el){ el.remove(); el = null; }
-    seen = false; pending = false;
-    document.body.classList.remove("cur-seen", "cur-hot", "cur-press");
-  }
-  function sync(){
-    const ok = okNow();
-    if(ok && !el) create();
-    else if(!ok && el) destroy();
-  }
-  sync();
-  window.addEventListener("resize", sync, { passive:true });
-  mqReduced.addEventListener("change", sync);
-  mqFine.addEventListener("change", sync);
-  mqHover.addEventListener("change", sync);
-
-  /* 指针移动：只记录坐标，位移写入合并到帧内（无插值/缓动，与系统指针同帧到达） */
-  window.addEventListener("pointermove", e => {
-    if(!el) return;
-    px = e.clientX; py = e.clientY;
-    if(!seen){ seen = true; document.body.classList.add("cur-seen"); }
-    if(!pending){ pending = true; Ticker.wake(); }
-  }, { passive:true });
-
-  // 每帧最多写一次位移；无待写坐标时该任务不活跃，循环自动停摆
-  Ticker.add(() => {
-    if(el && pending){ pending = false; el.style.translate = px + "px " + py + "px"; }
-  }, () => !!el && pending);
-
-  /* 悬停反馈：事件委托 → body.cur-hot（放大 2.4 倍） */
-  document.addEventListener("pointerover", e => {
-    if(!el) return;
-    const t = e.target;
-    if(!t || !t.closest) return;
-    document.body.classList.toggle("cur-hot", !!t.closest("a, button, .repo, .stat, [data-cursor]"));
-  }, { passive:true });
-
-  /* 按下反馈：body.cur-press（缩至 0.7）+ 按下点一次性涟漪 */
-  function ripple(x, y){
-    const r = document.createElement("span");
-    r.className = "cursor-ripple";
-    r.setAttribute("aria-hidden", "true");
-    r.style.translate = x + "px " + y + "px";
-    document.body.appendChild(r);
-    let gone = false;
-    const kill = () => { if(gone) return; gone = true; r.remove(); };
-    r.addEventListener("animationend", kill, { once:true });
-    setTimeout(kill, 600);                        // 兜底：动画未触发也要移除
-  }
-  window.addEventListener("pointerdown", e => {
-    if(!el) return;
-    document.body.classList.add("cur-press");
-    ripple(e.clientX, e.clientY);
-  }, { passive:true });
-  window.addEventListener("pointerup", () => {
-    if(el) document.body.classList.remove("cur-press");
-  }, { passive:true });
-
-  /* 指针移出窗口 / 窗口失焦 → 淡出；移入 / 聚焦 → 淡入 */
-  document.addEventListener("mouseleave", () => { if(el) document.body.classList.remove("cur-seen"); });
-  document.addEventListener("mouseenter", () => { if(el && seen) document.body.classList.add("cur-seen"); });
-  window.addEventListener("blur",  () => { if(el) document.body.classList.remove("cur-seen"); });
-  window.addEventListener("focus", () => { if(el && seen) document.body.classList.add("cur-seen"); });
-
+(function btnMagnet(){
   /* ---------- 磁吸主按钮（位移上限 6px，系数 0.2，离开 300ms 弹性回位） ---------- */
   document.querySelectorAll(".btn-primary").forEach(btn => {
     btn.addEventListener("mousemove", e => {
@@ -1484,6 +1383,36 @@ function animateStats(){
   let t = null;
   window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(draw, 180); }, { passive:true });
 })();
+</script>
+
+<!-- ============ 鼠标光效：ba-click-fx（蔚蓝档案风格点击圆环 / 碎片 / 光标拖尾） ============ -->
+<script type="module">
+  import { BAClickFX } from 'https://cdn.jsdelivr.net/npm/ba-click-fx@1.3.3/dist/ba-click-fx.js';
+
+  /* 普通网页推荐的覆盖层配置：省略 target → 创建全屏覆盖层 */
+  const fx = new BAClickFX({
+    outputCompositing: 'browser-overlay',
+    hostCompositing: 'screen',
+    hostCompositingSurface: 'dom-backdrop',
+  });
+
+  /* 拖尾：默认需按住指针，开启后鼠标移动即显示 */
+  fx.updateConfig({ trailAlways: true });
+
+  /* ---------- 与页面深蓝科技风协调：整体降亮度 ---------- */
+  /* 主题色对齐 --accent-1（青蓝）；库默认主题色为 #4ca7ff */
+  fx.setThemeColor('#38bdf8');
+
+  /* 尺寸与整体不透明度：默认均为 1（scale 0.9 微微收小，opacity 0.32 第三次压暗） */
+  fx.updateConfig({ scale: 0.9, opacity: 0.32 });
+
+  /* 辉光强度：库默认 1.7，三次下调至 0.5（取值区间 0–2） */
+  fx.setFxParam('bloom.intensity', 0.5);
+
+  /* 辉光分层亮度微调（默认值：ring 0.35 / disk 0.65 / trail 0.18） */
+  fx.setFxParam('bloom.ringAlpha', 0.15);
+  fx.setFxParam('bloom.diskAlpha', 0.28);
+  fx.setFxParam('bloom.trailAlpha', 0.06);
 </script>
 </body>
 </html>
